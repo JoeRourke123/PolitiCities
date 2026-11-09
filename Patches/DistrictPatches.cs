@@ -9,7 +9,7 @@ namespace PolitiCities.Patches
     {
         public static bool Allow;
 
-        public static bool Prefix(uint8 district)
+        public static bool Prefix(byte district)
         {
             if (Allow)
             {
