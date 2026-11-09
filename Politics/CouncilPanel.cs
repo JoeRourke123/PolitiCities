@@ -128,7 +128,7 @@ namespace PolitiCities.Politics
         {
             if (panel != null)
             {
-                Object.Destroy(panel.gameObject);
+                UnityEngine.Object.Destroy(panel.gameObject);
                 panel = null;
                 body = null;
                 dynamicControls.Clear();
@@ -145,7 +145,7 @@ namespace PolitiCities.Politics
             {
                 if (c != null)
                 {
-                    Object.Destroy(c.gameObject);
+                    UnityEngine.Object.Destroy(c.gameObject);
                 }
             }
             dynamicControls.Clear();
