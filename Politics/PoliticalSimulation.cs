@@ -78,11 +78,11 @@ namespace PolitiCities.Politics
                 return false;
             }
             EconomyManager eco = Singleton<EconomyManager>.instance;
-            if (eco == null || eco.m_cashAmount < amount)
+            if (eco == null || eco.InternalCashAmount < amount)
             {
                 return false;
             }
-            eco.m_cashAmount -= amount;
+            eco.AddResource(EconomyManager.Resource.PolicyCost, -(int)amount, ItemClass.Service.None, ItemClass.SubService.None, ItemClass.Level.None);
             PoliticalEngine.FundCampaign(s, (int)amount);
             PoliticalEngine.LogEvent(s, "Campaign funded with " + amount + " from city funds");
             return true;
