@@ -7,7 +7,7 @@ namespace PolitiCities.Politics
 {
     public class PoliticalSimulation : ThreadingExtensionBase
     {
-        private Random random;
+        private System.Random random;
 
         public override void OnAfterSimulationTick()
         {
@@ -18,7 +18,7 @@ namespace PolitiCities.Politics
             }
             if (random == null)
             {
-                random = new Random(s.RandomSeed);
+                random = new System.Random(s.RandomSeed);
             }
 
             PoliticalEngine.Tick(s, random, ReadRealApproval());
@@ -75,7 +75,7 @@ namespace PolitiCities.Politics
             {
                 try
                 {
-                    Policies policy = (Policies)Enum.Parse(typeof(Policies), policyName);
+                    DistrictPolicies.Policies policy = (DistrictPolicies.Policies)Enum.Parse(typeof(DistrictPolicies.Policies), policyName);
                     dm.SetDistrictPolicy(policy, (byte)district);
                 }
                 catch (Exception e)

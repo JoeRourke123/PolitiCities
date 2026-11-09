@@ -7,7 +7,7 @@ namespace PolitiCities.Patches
     [HarmonyPatch(typeof(DistrictManager), nameof(DistrictManager.SetCityPolicy))]
     public static class CouncilVotePatch
     {
-        public static bool Prefix(Policies policy)
+        public static bool Prefix(DistrictPolicies.Policies policy)
         {
             PoliticalState s = PoliticalData.Current;
             if (s == null || !Settings.EnforceCouncilVotes)
