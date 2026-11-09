@@ -69,7 +69,9 @@ Extension points used: `IUserMod` (entry), `LoadingExtensionBase` (lifecycle + h
 3. Council vote enforcement — done: `Patches/CouncilPatches.cs` prefix on `DistrictManager.SetCityPolicy(Policies)`, off by default (`Settings.EnforceCouncilVotes`), votes per `PoliticalEngine.CouncilVote` (governing-party platform auto-approves, otherwise coalition majority).
 4. District elections — done in engine + adapter: every `MonthsPerDistrictElection` (12) months per district, winner from seeded vote + district happiness/crime (`District.m_finalHappiness`/`m_finalCrimeRate`), winner's `Party.Platform` policies applied via `DistrictManager.SetDistrictPolicy(Policies, uint8)`.
 5. Sliders — engine-level effects on approval done (`PoliticalEngine.ApplySliderEffects`); panel +/- controls; continuous game-effect patches still open.
-6. Campaigns/ministries affecting the real budget — open.
+6. Campaigns/ministries vs the real economy — done: "Fund campaign" spends real city cash (`EconomyManager.InternalCashAmount` read, `AddResource(Resource.PolicyCost, -amount, …)` deduct); ministries have competence (0.4–1.0) assigned at coalition formation and scale service budgets via a `GetBudget(Service, SubService, bool)` postfix (`MinistryBudgetPatch`).
+
+Also implemented: economic crises (`PoliticalEngine.CrisisTable`: factoryClosures / tradeShock / financialPanic / scandal; ~5%/month while none active; approval + income effects, income applied in `StimulusIncomePatch` prefix), foreign relations meters for 3 powers with random events, and a capped event log shown in the panel. Save format v3 (file-based; embedded `ISerializableDataManager` still open).
 
 ## Tests
 
