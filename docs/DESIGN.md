@@ -71,9 +71,15 @@ Extension points used: `IUserMod` (entry), `LoadingExtensionBase` (lifecycle + h
 5. Sliders → continuous effect patches; pilot district scoping in the same patches.
 6. Campaign spending from `EconomyManager` budget; ministries affecting service budgets.
 
+## Verified signatures (read from `lib/` DLLs via metadata, 2026-11)
+
+- Policies live on `DistrictManager` (no `PolicyManager` type): `bool IsCityPolicySet(Policies)`, `void SetCityPolicy(Policies)`, `bool IsDistrictPolicySet(Policies, uint8)`, `void SetDistrictPolicy(Policies, uint8)`, `string GetDistrictName(int)`, `uint8 GetDistrict(Vector3)`, fields `int m_districtCount`, `Array8<District> m_districts`. Policy flags enum is `Policies`.
+- Approval/happiness: `Singleton<StatisticsManager>.instance.Get(StatisticType.CityHappiness)` returns `StatisticBase`; value via `GetLatestInt32()` (0-100). Wired into `PoliticalSimulation.ReadRealApproval`.
+- Economy effect hook: `EconomyManager.AddPrivateIncome(int amount, Service, SubService, Level, int taxRate)` — patched with a `ref int amount` prefix (`Patches/EconomyPatches.cs`), +10% private income while `stimulusPackage` is fully implemented.
+- `District` struct: per-zone `DistrictPrivateData` fields (m_residentialData…), `uint8 m_finalHappiness`, `uint8 m_finalCrimeRate`, policy flag fields per category.
+- ICities confirmed: `ISerializableDataExtension` = `OnCreated(ISerializableData)`/`OnReleased()`/`OnLoadData()`/`OnSaveData()`; `ThreadingExtensionBase.OnAfterSimulationTick()`; `Singleton<T>.instance`; `DataLocation.localApplicationData`; `UIView.GetAView()` + `AddUIComponent(Type)`.
+
 ## Open questions (verify in dnSpy against `lib/` DLLs)
 
-- `PolicyManager.IsCityPolicySet` / `SetCityPolicy` signatures (string name vs `PolicyInfo`).
-- `DistrictPolicies` flag values and `District` struct fields for stats.
-- Exact approval/happiness accessor on `StatisticsManager` (`CityHappiness`).
-- `IDataContainer` / `ISerializableDataManager` member signatures for embedded savegame data.
+- `ISerializableDataManager` / `IDataContainer` member signatures for savegame-embedded persistence (currently file-based in `PoliticalData`).
+- How vanilla policy upkeep is charged (`EconomyManager.CalculatePolicyExpenses`) for custom policy costs.

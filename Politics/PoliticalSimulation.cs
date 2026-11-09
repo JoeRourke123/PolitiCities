@@ -1,4 +1,5 @@
 using System;
+using ColossalFramework;
 using ICities;
 
 namespace PolitiCities.Politics
@@ -41,6 +42,7 @@ namespace PolitiCities.Politics
 
         private void MonthlyUpdate(PoliticalState s)
         {
+            ReadRealApproval(s);
             DriftVoteShares(s);
             DecayCampaigns(s);
 
@@ -49,6 +51,15 @@ namespace PolitiCities.Politics
             {
                 s.MonthsSinceElection = 0;
                 s.Council.RecomputeFromShares(s.VoteShare);
+            }
+        }
+
+        private void ReadRealApproval(PoliticalState s)
+        {
+            StatisticBase happiness = Singleton<StatisticsManager>.instance.Get(StatisticType.CityHappiness);
+            if (happiness != null)
+            {
+                s.LeaderApproval = happiness.GetLatestInt32() / 100f;
             }
         }
 

@@ -38,6 +38,20 @@ namespace PolitiCities.Politics
             body.size = new Vector2(436f, 420f);
             body.wordWrap = true;
 
+            UIButton enact = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+            enact.text = "Enact stimulus package";
+            enact.size = new Vector2(180f, 30f);
+            enact.relativePosition = new Vector3(12f, 480f);
+            enact.eventClicked += (c, p) =>
+            {
+                PoliticalState s = PoliticalData.Current;
+                if (s != null)
+                {
+                    PoliticalSimulation.EnactPolicy(s, Patches.StimulusIncomePatch.PolicyId, -1);
+                }
+                Refresh();
+            };
+
             UIButton close = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             close.text = "Close";
             close.size = new Vector2(100f, 30f);
