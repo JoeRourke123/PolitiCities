@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text;
 using ColossalFramework;
 using ColossalFramework.UI;
@@ -12,6 +14,8 @@ namespace PolitiCities.Politics
         private UIPanel panel;
         private UILabel body;
         private UILabel[] sliderLabels = new UILabel[SliderKeys.Length];
+        private readonly List<UIComponent> dynamicControls = new List<UIComponent>();
+        private readonly Random uiRandom = new Random();
 
         public bool IsOpen
         {
@@ -27,8 +31,8 @@ namespace PolitiCities.Politics
             UIView view = UIView.GetAView();
             panel = view.AddUIComponent(typeof(UIPanel)) as UIPanel;
             panel.name = "PolitiCitiesCouncilPanel";
-            panel.size = new Vector2(480f, 660f);
-            panel.relativePosition = new Vector3(100f, 40f);
+            panel.size = new Vector2(500f, 880f);
+            panel.relativePosition = new Vector3(100f, 20f);
             panel.backgroundSprite = "MenuPanelInfo";
 
             UILabel title = panel.AddUIComponent(typeof(UILabel)) as UILabel;
@@ -38,14 +42,19 @@ namespace PolitiCities.Politics
 
             body = panel.AddUIComponent(typeof(UILabel)) as UILabel;
             body.textScale = 0.85f;
-            body.relativePosition = new Vector3(12f, 36f);
-            body.size = new Vector2(456f, 400f);
+            body.relativePosition = new Vector3(12f, 34f);
+            body.size = new Vector2(476f, 330f);
             body.wordWrap = true;
+
+            UILabel policiesHeader = panel.AddUIComponent(typeof(UILabel)) as UILabel;
+            policiesHeader.text = "Policy programme (enact to start implementing):";
+            policiesHeader.textScale = 0.9f;
+            policiesHeader.relativePosition = new Vector3(12f, 372f);
 
             for (int i = 0; i < SliderKeys.Length; i++)
             {
                 int index = i;
-                float y = 446f + i * 30f;
+                float y = 742f + i * 30f;
                 UILabel label = panel.AddUIComponent(typeof(UILabel)) as UILabel;
                 label.textScale = 0.85f;
                 label.relativePosition = new Vector3(12f, y);
@@ -65,43 +74,10 @@ namespace PolitiCities.Politics
                 plus.eventClicked += (c, p) => AdjustSlider(index, PoliticalEngine.SliderStep);
             }
 
-            UIButton enact = panel.AddUIComponent(typeof(UIButton)) as UIButton;
-            enact.text = "Enact stimulus package";
-            enact.size = new Vector2(180f, 28f);
-            enact.relativePosition = new Vector3(12f, 540f);
-            enact.eventClicked += (c, p) =>
-            {
-                PoliticalState s = PoliticalData.Current;
-                if (s != null)
-                {
-                    PoliticalEngine.EnactPolicy(s, Patches.StimulusIncomePatch.PolicyId, -1);
-                }
-                Refresh();
-            };
-
-            UIButton referendum = panel.AddUIComponent(typeof(UIButton)) as UIButton;
-            referendum.text = "Referendum: greenNewDeal";
-            referendum.size = new Vector2(190f, 28f);
-            referendum.relativePosition = new Vector3(200f, 574f);
-            referendum.eventClicked += (c, p) =>
-            {
-                PoliticalState s = PoliticalData.Current;
-                if (s != null)
-                {
-                    bool pass = PoliticalEngine.HoldReferendum(s, new System.Random(s.RandomSeed + s.MonthsSinceElection), "greenNewDeal");
-                    if (pass)
-                    {
-                        PoliticalEngine.EnactPolicy(s, "greenNewDeal", -1);
-                        s.PolicyProgress["greenNewDeal"] = 1f;
-                    }
-                }
-                Refresh();
-            };
-
             UIButton fund = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             fund.text = "Fund campaign 5000";
             fund.size = new Vector2(160f, 28f);
-            fund.relativePosition = new Vector3(12f, 574f);
+            fund.relativePosition = new Vector3(12f, 838f);
             fund.eventClicked += (c, p) =>
             {
                 PoliticalState s = PoliticalData.Current;
@@ -114,14 +90,14 @@ namespace PolitiCities.Politics
 
             UIButton promote = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             promote.text = "Promote pilots city-wide";
-            promote.size = new Vector2(180f, 28f);
-            promote.relativePosition = new Vector3(200f, 540f);
+            promote.size = new Vector2(170f, 28f);
+            promote.relativePosition = new Vector3(180f, 838f);
             promote.eventClicked += (c, p) =>
             {
                 PoliticalState s = PoliticalData.Current;
                 if (s != null)
                 {
-                    foreach (var kv in new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<string, int>>(s.PilotDistricts))
+                    foreach (var kv in new List<KeyValuePair<string, int>>(s.PilotDistricts))
                     {
                         PoliticalEngine.PromotePilot(s, kv.Key);
                     }
@@ -132,7 +108,7 @@ namespace PolitiCities.Politics
             UIButton close = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             close.text = "Close";
             close.size = new Vector2(100f, 28f);
-            close.relativePosition = new Vector3(368f, 620f);
+            close.relativePosition = new Vector3(388f, 838f);
             close.eventClicked += (c, p) => Hide();
 
             Refresh();
@@ -155,6 +131,7 @@ namespace PolitiCities.Politics
                 Object.Destroy(panel.gameObject);
                 panel = null;
                 body = null;
+                dynamicControls.Clear();
             }
         }
 
@@ -164,6 +141,15 @@ namespace PolitiCities.Politics
             {
                 return;
             }
+            foreach (UIComponent c in dynamicControls)
+            {
+                if (c != null)
+                {
+                    Object.Destroy(c.gameObject);
+                }
+            }
+            dynamicControls.Clear();
+
             PoliticalState s = PoliticalData.Current;
             if (s == null)
             {
@@ -171,6 +157,20 @@ namespace PolitiCities.Politics
                 return;
             }
 
+            body.text = BuildBodyText(s);
+            BuildPolicyRows(s);
+            BuildEventControls(s);
+
+            for (int i = 0; i < SliderKeys.Length; i++)
+            {
+                float v;
+                s.PolicySliders.TryGetValue(SliderKeys[i], out v);
+                sliderLabels[i].text = SliderKeys[i] + ": " + v.ToString("0.00");
+            }
+        }
+
+        private string BuildBodyText(PoliticalState s)
+        {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("Vote intention:");
             for (int i = 0; i < Party.Roster.Length; i++)
@@ -189,22 +189,24 @@ namespace PolitiCities.Politics
             {
                 string pid = m < s.Council.MinistryParty.Length ? s.Council.MinistryParty[m] : null;
                 Party owner = pid != null ? Party.ById(pid) : null;
-                sb.AppendLine("  " + Council.MinistryNames[m] + ": " + (owner != null ? owner.Name : "vacant"));
+                float comp = m < s.Council.MinisterCompetence.Length ? s.Council.MinisterCompetence[m] : 0f;
+                sb.AppendLine("  " + Council.MinistryNames[m] + ": " + (owner != null ? owner.Name : "vacant") + " (comp " + comp.ToString("0.00") + ")");
             }
             sb.AppendLine();
             sb.AppendLine("Implementing: " + PolicyProgressText(s));
-            sb.AppendLine("Pilots: " + (s.PilotDistricts.Count == 0 ? "none" : string.Join(", ", Keys(s.PilotDistricts))));
+            sb.AppendLine("Pilots: " + (s.PilotDistricts.Count == 0 ? "none" : string.Join(", ", PilotText(s))));
             sb.AppendLine();
             sb.AppendLine("Districts (ruling party):");
             int shown = 0;
             DistrictManager dm = Singleton<DistrictManager>.instance;
             int count = dm != null ? dm.m_districtCount : 0;
-            for (int i = 0; i < count && shown < 6; i++)
+            for (int i = 0; i < count && shown < 5; i++)
             {
                 int ruler;
                 if (s.RulingParty.TryGetValue(i, out ruler))
                 {
-                    sb.AppendLine("  " + i + " " + dm.GetDistrictName(i) + ": " + Party.Roster[ruler].Name);
+                    string lock = PoliticalEngine.CanPlayerEditDistrict(s, i) ? "" : " [locked]";
+                    sb.AppendLine("  " + dm.GetDistrictName(i) + ": " + Party.Roster[ruler].Name + lock);
                     shown++;
                 }
             }
@@ -213,40 +215,110 @@ namespace PolitiCities.Politics
                 sb.AppendLine("  no elections held yet");
             }
             sb.AppendLine();
-            sb.AppendLine("Campaign budget: " + s.CampaignBudget + "  boosts: " + s.CampaignBoost.Count);
+            sb.AppendLine("Campaign budget: " + s.CampaignBudget + "  Corruption: " + (s.Corruption * 100f).ToString("0") + "%");
             sb.AppendLine("Approval: " + (s.LeaderApproval * 100f).ToString("0") + "%  next city election in " + (PoliticalEngine.MonthsPerElection - s.MonthsSinceElection) + " months");
-            sb.AppendLine();
-            sb.AppendLine("Active crises: " + (s.ActiveCrises.Count == 0 ? "none" : string.Join(", ", CrisisNames(s))));
-            sb.AppendLine("Foreign relations:");
-            foreach (var kv in s.ForeignRelations)
-            {
-                sb.AppendLine("  " + kv.Key + ": " + kv.Value.ToString("0"));
-            }
+            sb.AppendLine("Crises: " + (s.ActiveCrises.Count == 0 ? "none" : string.Join(", ", CrisisNames(s))));
+            sb.AppendLine("Foreign avg: " + PoliticalEngine.AverageForeignRelations(s).ToString("0"));
             sb.AppendLine();
             sb.AppendLine("Events:");
-            int from = System.Math.Max(0, s.EventLog.Count - 5);
+            int from = Math.Max(0, s.EventLog.Count - 4);
             for (int i = from; i < s.EventLog.Count; i++)
             {
                 sb.AppendLine("  " + s.EventLog[i]);
             }
-            body.text = sb.ToString();
+            return sb.ToString();
+        }
 
-            for (int i = 0; i < SliderKeys.Length; i++)
+        private void BuildPolicyRows(PoliticalState s)
+        {
+            for (int pi = 0; pi < Content.Policies.Length; pi++)
             {
-                float v;
-                s.PolicySliders.TryGetValue(SliderKeys[i], out v);
-                sliderLabels[i].text = SliderKeys[i] + ": " + v.ToString("0.00");
+                PolicyDef d = Content.Policies[pi];
+                float y = 392f + pi * 24f;
+                bool implemented = PoliticalEngine.IsPolicyImplemented(s, d.Id);
+                bool inProgress = s.PolicyProgress.ContainsKey(d.Id) && !implemented;
+                bool unlocked = PoliticalEngine.IsPolicyUnlocked(s, d.Id);
+                float progress;
+                s.PolicyProgress.TryGetValue(d.Id, out progress);
+
+                UILabel label = panel.AddUIComponent(typeof(UILabel)) as UILabel;
+                label.textScale = 0.8f;
+                label.relativePosition = new Vector3(12f, y);
+                label.size = new Vector2(300f, 20f);
+                string state = implemented ? "ACTIVE" : (inProgress ? (progress * 100f).ToString("0") + "%" : (unlocked ? "ready" : "locked (approval " + d.UnlockApproval.ToString("0%") + ")"));
+                label.text = d.Name + " — " + state;
+                label.tooltip = d.Description;
+                dynamicControls.Add(label);
+
+                UIButton enact = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+                enact.text = "Enact";
+                enact.size = new Vector2(70f, 22f);
+                enact.relativePosition = new Vector3(330f, y);
+                enact.isEnabled = unlocked && !implemented && !inProgress;
+                enact.eventClicked += (c, p) =>
+                {
+                    PoliticalEngine.EnactPolicy(s, d.Id, -1);
+                    PoliticalEngine.LogEvent(s, "Policy enacted: " + d.Name);
+                    Refresh();
+                };
+                dynamicControls.Add(enact);
+
+                UIButton referendum = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+                referendum.text = "Referendum";
+                referendum.size = new Vector2(90f, 22f);
+                referendum.relativePosition = new Vector3(406f, y);
+                bool isSubject = Array.IndexOf(Content.ReferendumSubjects, d.Id) >= 0;
+                referendum.isEnabled = isSubject && unlocked && !implemented && !inProgress;
+                referendum.eventClicked += (c, p) =>
+                {
+                    if (PoliticalEngine.HoldReferendum(s, uiRandom, d.Name))
+                    {
+                        PoliticalEngine.EnactPolicy(s, d.Id, -1);
+                        s.PolicyProgress[d.Id] = 1f;
+                        PoliticalEngine.LogEvent(s, d.Name + " implemented instantly by referendum");
+                    }
+                    Refresh();
+                };
+                dynamicControls.Add(referendum);
             }
         }
 
-        private static string[] CrisisNames(PoliticalState s)
+        private void BuildEventControls(PoliticalState s)
         {
-            var names = new System.Collections.Generic.List<string>();
-            foreach (var kv in s.ActiveCrises)
+            EventDef e = Content.EventById(s.PendingEvent);
+            UILabel header = panel.AddUIComponent(typeof(UILabel)) as UILabel;
+            header.textScale = 0.9f;
+            header.relativePosition = new Vector3(12f, 592f);
+            header.text = e != null ? "CURRENT EVENT:" : "No pending event.";
+            dynamicControls.Add(header);
+            if (e == null)
             {
-                names.Add(kv.Key + " (" + kv.Value + "m left)");
+                return;
             }
-            return names.ToArray();
+
+            UILabel text = panel.AddUIComponent(typeof(UILabel)) as UILabel;
+            text.textScale = 0.85f;
+            text.relativePosition = new Vector3(12f, 612f);
+            text.size = new Vector2(476f, 40f);
+            text.wordWrap = true;
+            text.text = e.Text;
+            dynamicControls.Add(text);
+
+            for (int i = 0; i < e.Choices.Length; i++)
+            {
+                int choice = i;
+                EventChoice c = e.Choices[i];
+                UIButton button = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+                button.text = c.Text;
+                button.size = new Vector2(476f, 24f);
+                button.relativePosition = new Vector3(12f, 656f + i * 26f);
+                button.eventClicked += (comp, p) =>
+                {
+                    PoliticalEngine.ChooseEventOption(s, uiRandom, choice);
+                    Refresh();
+                };
+                dynamicControls.Add(button);
+            }
         }
 
         private static string PolicyProgressText(PoliticalState s)
@@ -255,7 +327,7 @@ namespace PolitiCities.Politics
             {
                 return "none";
             }
-            var parts = new System.Collections.Generic.List<string>();
+            var parts = new List<string>();
             foreach (var kv in s.PolicyProgress)
             {
                 parts.Add(kv.Key + " " + (kv.Value * 100f).ToString("0") + "%");
@@ -263,10 +335,20 @@ namespace PolitiCities.Politics
             return string.Join(", ", parts.ToArray());
         }
 
-        private static string[] Keys(System.Collections.Generic.Dictionary<string, int> d)
+        private static string[] CrisisNames(PoliticalState s)
         {
-            var keys = new System.Collections.Generic.List<string>();
-            foreach (var kv in d)
+            var names = new List<string>();
+            foreach (var kv in s.ActiveCrises)
+            {
+                names.Add(kv.Key + " (" + kv.Value + "m left)");
+            }
+            return names.ToArray();
+        }
+
+        private static string[] PilotText(PoliticalState s)
+        {
+            var keys = new List<string>();
+            foreach (var kv in s.PilotDistricts)
             {
                 keys.Add(kv.Key + "->district " + kv.Value);
             }

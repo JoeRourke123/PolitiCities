@@ -38,8 +38,10 @@ namespace PolitiCities.Politics
         public const float ForeignEventChancePerMonth = 0.1f;
         public const int EventLogCapacity = 50;
         public const int PollHistoryMonths = 24;
+        public const float EventChancePerMonth = 0.15f;
+        public const float ScandalChancePerMonth = 0.15f;
+        public const float ScandalCorruptionThreshold = 0.6f;
 
-        public static readonly string[] KnownPolicies = { StimulusPolicyId, "greenNewDeal" };
         public const string StimulusPolicyId = "stimulusPackage";
 
         public static readonly CrisisDef[] CrisisTable =
@@ -48,9 +50,13 @@ namespace PolitiCities.Politics
             new CrisisDef("tradeShock", 0.04f, 0.15f, 4),
             new CrisisDef("financialPanic", 0.10f, 0.20f, 8),
             new CrisisDef("scandal", 0.08f, 0f, 3),
+            new CrisisDef("pandemic", 0.12f, 0.15f, 10),
+            new CrisisDef("housingBubble", 0.05f, 0.12f, 6),
+            new CrisisDef("energyShortage", 0.07f, 0.18f, 5),
+            new CrisisDef("refugeeWave", 0.09f, 0.05f, 7),
         };
 
-        public static readonly string[] ForeignPowers = { "Aldermark", "Port Vela", "Kessig Republic" };
+        public static readonly string[] ForeignPowers = { "Aldermark", "Port Vela", "Kessig Republic", "Novaya Zemlya", "Sun Coast Coalition" };
 
         public static void Tick(PoliticalState s, Random rng, float realApproval)
         {
@@ -70,14 +76,15 @@ namespace PolitiCities.Politics
                 s.LeaderApproval = Clamp01(realApproval);
             }
             ApplySliderEffects(s);
-            ApplyPolicyEffects(s);
-            s.LeaderApproval = Clamp01(s.LeaderApproval - CrisisApprovalPenalty(s) * 0.1f);
+            s.LeaderApproval = Clamp01(s.LeaderApproval + PolicyApprovalDelta(s) - CrisisApprovalPenalty(s) * 0.1f);
             DriftVoteShares(s, rng);
             RecordPollHistory(s);
             DecayCampaigns(s);
             TickCrises(s, rng);
             MaybeTriggerCrisis(s, rng);
             TickForeign(s, rng);
+            TickCorruption(s, rng);
+            RollEvent(s, rng);
 
             s.MonthsSinceElection++;
             if (s.MonthsSinceElection >= MonthsPerElection)
@@ -96,13 +103,136 @@ namespace PolitiCities.Politics
             s.LeaderApproval = Clamp01(s.LeaderApproval + delta);
         }
 
-        public static void ApplyPolicyEffects(PoliticalState s)
+        public static bool IsPolicyImplemented(PoliticalState s, string policyId)
         {
             float progress;
-            if (s.PolicyProgress.TryGetValue("greenNewDeal", out progress) && progress >= 1f)
+            return s.PolicyProgress.TryGetValue(policyId, out progress) && progress >= 1f;
+        }
+
+        public static bool IsPolicyUnlocked(PoliticalState s, string policyId)
+        {
+            PolicyDef def = Content.PolicyById(policyId);
+            return def != null && s.LeaderApproval >= def.UnlockApproval;
+        }
+
+        public static float PolicyApprovalDelta(PoliticalState s)
+        {
+            float sum = 0f;
+            foreach (PolicyDef def in Content.Policies)
             {
-                s.LeaderApproval = Clamp01(s.LeaderApproval + 0.01f);
+                if (IsPolicyImplemented(s, def.Id))
+                {
+                    sum += def.ApprovalDeltaPerMonth;
+                }
             }
+            return sum;
+        }
+
+        public static float PolicyIncomeMultiplier(PoliticalState s)
+        {
+            float mult = 1f;
+            foreach (PolicyDef def in Content.Policies)
+            {
+                if (IsPolicyImplemented(s, def.Id))
+                {
+                    mult *= def.IncomeMultiplier;
+                }
+            }
+            return mult;
+        }
+
+        public static float PolicyForeignDelta(PoliticalState s)
+        {
+            float sum = 0f;
+            foreach (PolicyDef def in Content.Policies)
+            {
+                if (IsPolicyImplemented(s, def.Id))
+                {
+                    sum += def.ForeignDelta;
+                }
+            }
+            return sum;
+        }
+
+        public static float AverageForeignRelations(PoliticalState s)
+        {
+            if (s.ForeignRelations.Count == 0)
+            {
+                return 50f;
+            }
+            float sum = 0f;
+            foreach (var kv in s.ForeignRelations)
+            {
+                sum += kv.Value;
+            }
+            return sum / s.ForeignRelations.Count;
+        }
+
+        public static float ForeignTradeMultiplier(PoliticalState s)
+        {
+            return 0.9f + 0.2f * (AverageForeignRelations(s) / 100f);
+        }
+
+        public static void TickCorruption(PoliticalState s, Random rng)
+        {
+            float integrity = AverageMinisterIntegrity(s);
+            float delta = 0.003f + (IsPolicyImplemented(s, "propagandaMachine") ? 0.02f : 0f) + (s.CampaignBoost.Count > 0 ? 0.002f : 0f) - integrity * 0.005f;
+            s.Corruption = Clamp01(s.Corruption + delta);
+            if (s.Corruption >= ScandalCorruptionThreshold && rng.NextDouble() < ScandalChancePerMonth)
+            {
+                s.Corruption = Clamp01(s.Corruption - 0.2f);
+                s.LeaderApproval = Clamp01(s.LeaderApproval - 0.08f);
+                LogEvent(s, "SCANDAL! Corruption exposed by the press. Approval hit.");
+            }
+        }
+
+        private static float AverageMinisterIntegrity(PoliticalState s)
+        {
+            if (s.Council.MinisterIntegrity == null || s.Council.MinisterIntegrity.Length == 0)
+            {
+                return 0.5f;
+            }
+            float sum = 0f;
+            foreach (float i in s.Council.MinisterIntegrity)
+            {
+                sum += i;
+            }
+            return sum / s.Council.MinisterIntegrity.Length;
+        }
+
+        public static void RollEvent(PoliticalState s, Random rng)
+        {
+            if (s.PendingEvent != null)
+            {
+                return;
+            }
+            if (rng.NextDouble() < EventChancePerMonth)
+            {
+                EventDef e = Content.Events[rng.Next(Content.Events.Length)];
+                s.PendingEvent = e.Id;
+                LogEvent(s, "Event: " + e.Text);
+            }
+        }
+
+        public static void ChooseEventOption(PoliticalState s, Random rng, int choiceIndex)
+        {
+            EventDef e = Content.EventById(s.PendingEvent);
+            if (e == null || choiceIndex < 0 || choiceIndex >= e.Choices.Length)
+            {
+                return;
+            }
+            EventChoice c = e.Choices[choiceIndex];
+            s.LeaderApproval = Clamp01(s.LeaderApproval + c.ApprovalDelta);
+            s.CampaignBudget = Math.Max(0, s.CampaignBudget + c.BudgetDelta);
+            s.Corruption = Clamp01(s.Corruption + c.CorruptionDelta);
+            if (c.ForeignDelta != 0f && s.ForeignRelations.Count > 0)
+            {
+                var powers = new List<string>(s.ForeignRelations.Keys);
+                string power = powers[rng.Next(powers.Count)];
+                s.ForeignRelations[power] = Clamp(s.ForeignRelations[power] + c.ForeignDelta, 0f, 100f);
+            }
+            LogEvent(s, "Chose '" + c.Text + "' (" + e.Id + ")");
+            s.PendingEvent = null;
         }
 
         public static void RecordPollHistory(PoliticalState s)
@@ -370,7 +500,7 @@ namespace PolitiCities.Politics
             if (rng.NextDouble() < ForeignEventChancePerMonth)
             {
                 string power = ForeignPowers[rng.Next(ForeignPowers.Length)];
-                float delta = ((float)rng.NextDouble() - 0.5f) * 30f;
+                float delta = ((float)rng.NextDouble() - 0.5f) * 30f + PolicyForeignDelta(s);
                 float v;
                 s.ForeignRelations.TryGetValue(power, out v);
                 s.ForeignRelations[power] = Clamp(v + delta, 0f, 100f);

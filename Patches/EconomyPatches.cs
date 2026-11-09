@@ -16,12 +16,9 @@ namespace PolitiCities.Patches
             {
                 return;
             }
-            float multiplier = PoliticalEngine.CrisisIncomeMultiplier(s);
-            float progress;
-            if (s.PolicyProgress.TryGetValue(PolicyId, out progress) && progress >= 1f)
-            {
-                multiplier *= IncomeMultiplier;
-            }
+            float multiplier = PoliticalEngine.CrisisIncomeMultiplier(s)
+                * PoliticalEngine.ForeignTradeMultiplier(s)
+                * PoliticalEngine.PolicyIncomeMultiplier(s);
             amount = (int)(amount * multiplier);
         }
     }

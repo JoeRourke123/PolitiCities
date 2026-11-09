@@ -14,6 +14,7 @@
     <Compile Include="..\Politics\Council.cs" Link="Politics\Council.cs" />
     <Compile Include="..\Politics\PoliticalState.cs" Link="Politics\PoliticalState.cs" />
     <Compile Include="..\Politics\PoliticalEngine.cs" Link="Politics\PoliticalEngine.cs" />
+    <Compile Include="..\Politics\Content.cs" Link="Politics\Content.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,6 +16,7 @@ namespace PolitiCities.Politics
         public bool[] InCoalition = new bool[Party.Roster.Length];
         public string[] MinistryParty = new string[MinistryNames.Length];
         public float[] MinisterCompetence = new float[MinistryNames.Length];
+        public float[] MinisterIntegrity = new float[MinistryNames.Length];
         public int GoverningParty = -1;
 
         public void RecomputeFromShares(float[] shares)
@@ -129,6 +130,7 @@ namespace PolitiCities.Politics
                 }
                 MinistryParty[m] = best >= 0 ? Party.Roster[best].Id : null;
                 MinisterCompetence[m] = 0.4f + 0.6f * (float)rng.NextDouble();
+                MinisterIntegrity[m] = 0.4f + 0.6f * (float)rng.NextDouble();
             }
         }
 

@@ -6,7 +6,7 @@ namespace PolitiCities.Politics
 {
     public sealed class PoliticalState
     {
-        public const int SaveVersion = 4;
+        public const int SaveVersion = 5;
 
         public float[] VoteShare = new float[Party.Roster.Length];
         public float LeaderApproval = 0.6f;
@@ -27,6 +27,8 @@ namespace PolitiCities.Politics
         public Dictionary<string, float> ForeignRelations = new Dictionary<string, float>();
         public List<string> EventLog = new List<string>();
         public List<float[]> PollHistory = new List<float[]>();
+        public float Corruption;
+        public string PendingEvent;
 
         public PoliticalState()
         {
@@ -44,6 +46,8 @@ namespace PolitiCities.Politics
         {
             w.Write(SaveVersion);
             w.Write(RandomSeed);
+            w.Write(Corruption);
+            w.Write(PendingEvent ?? string.Empty);
             w.Write(LeaderApproval);
             w.Write(AdminCapacity);
             w.Write(CampaignBudget);
@@ -97,6 +101,11 @@ namespace PolitiCities.Politics
             {
                 w.Write(c);
             }
+            w.Write(Council.MinisterIntegrity.Length);
+            foreach (float c in Council.MinisterIntegrity)
+            {
+                w.Write(c);
+            }
         }
 
         public void Read(BinaryReader r)
@@ -107,6 +116,9 @@ namespace PolitiCities.Politics
                 return;
             }
             RandomSeed = r.ReadInt32();
+            Corruption = r.ReadSingle();
+            string pending = r.ReadString();
+            PendingEvent = pending.Length == 0 ? null : pending;
             LeaderApproval = r.ReadSingle();
             AdminCapacity = r.ReadSingle();
             CampaignBudget = r.ReadInt32();
@@ -169,6 +181,12 @@ namespace PolitiCities.Politics
             for (int i = 0; i < comp; i++)
             {
                 Council.MinisterCompetence[i] = r.ReadSingle();
+            }
+            int integ = r.ReadInt32();
+            Council.MinisterIntegrity = new float[integ];
+            for (int i = 0; i < integ; i++)
+            {
+                Council.MinisterIntegrity[i] = r.ReadSingle();
             }
         }
 
