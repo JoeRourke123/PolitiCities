@@ -7,3 +7,5 @@ obj/
 *.sln.docstates
 [Dd]ebug/
 [Rr]elease/
+dist/
+workshop/

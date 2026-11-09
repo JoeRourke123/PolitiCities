@@ -7,6 +7,7 @@
     <Deterministic>false</Deterministic>
     <AssemblyVersion>1.0.*</AssemblyVersion>
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <ManagedDLLPath Condition="'$(ManagedDLLPath)'=='' and Exists('$(MSBuildThisFileDirectory)lib\ICities.dll')">$(MSBuildThisFileDirectory)lib</ManagedDLLPath>
     <ManagedDLLPath Condition="'$(ManagedDLLPath)'==''">$(MSBuildProgramFiles32)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed</ManagedDLLPath>
     <DeployDir Condition="'$(DeployDir)'==''">$(LOCALAPPDATA)\Colossal Order\Cities_Skylines\Addons\Mods\$(AssemblyName)\</DeployDir>
   </PropertyGroup>
@@ -35,7 +36,7 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="DeployToModDirectory" AfterTargets="Build">
+  <Target Name="DeployToModDirectory" AfterTargets="Build" Condition="'$(OS)'=='Windows_NT'">
     <ItemGroup>
       <ModFiles Include="$(TargetDir)*.*" />
     </ItemGroup>
