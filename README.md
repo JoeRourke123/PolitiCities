@@ -46,6 +46,8 @@ The in-game alternative is still available: enable the local mod in Content Mana
 - `Settings.cs` — mod options panel via `IUserMod.OnSettingsUI`.
 - `lib/` — game reference DLLs used for building (see `lib/README.md`).
 - `.github/workflows/` — build / release / workshop-upload automation.
+- `Politics/` — the political simulation: `Party`/`Council` (model), `PoliticalState` (per-save state), `PoliticalData` (savegame persistence via `SerializableDataExtensionBase`), `PoliticalSimulation` (simulation tick via `ThreadingExtensionBase`), `CouncilPanel` + `HotkeyHandler` (UI, open with the `P` key in game).
+- `docs/DESIGN.md` — feature design, systems map, and build order.
 
 ## Key facts for contributors
 
