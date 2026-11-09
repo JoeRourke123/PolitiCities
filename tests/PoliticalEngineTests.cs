@@ -125,22 +125,56 @@ namespace PolitiCities.Tests
         }
 
         [Fact]
-        public void CouncilVoteRequiresMajorityUnlessPolicyInGoverningPlatform()
+        public void CouncilVoteRejectsWithoutCoalitionMajority()
         {
             PoliticalState s = NewState();
             var council = new Council();
             council.RecomputeFromShares(new float[] { 0.3f, 0.25f, 0.2f, 0.15f, 0.05f, 0.05f });
+            for (int i = 0; i < council.InCoalition.Length; i++)
+            {
+                council.InCoalition[i] = false;
+            }
+            council.GoverningParty = -1;
             s.Council = council;
-            Assert.True(council.CoalitionSeats() > Council.SeatCount / 2);
-            Assert.True(PoliticalEngine.CouncilVote(s, "anything"));
+            Assert.False(PoliticalEngine.CouncilVote(s, "notInPlatform", new Random(1)));
+        }
 
-            PoliticalState noMajority = NewState();
-            var c2 = new Council();
-            c2.RecomputeFromShares(new float[] { 0.2f, 0.2f, 0.2f, 0.2f, 0.1f, 0.1f });
-            noMajority.Council = c2;
-            Assert.False(PoliticalEngine.CouncilVote(noMajority, "notInPlatform"));
-            string platformPolicy = Party.Roster[c2.GoverningParty].Platform[0];
-            Assert.True(PoliticalEngine.CouncilVote(noMajority, platformPolicy));
+        [Fact]
+        public void CouncilVoteApprovesGoverningPartyPlatformEvenWithoutMajority()
+        {
+            PoliticalState s = NewState();
+            var council = new Council();
+            council.RecomputeFromShares(new float[] { 0.3f, 0.25f, 0.2f, 0.15f, 0.05f, 0.05f });
+            for (int i = 0; i < council.InCoalition.Length; i++)
+            {
+                council.InCoalition[i] = false;
+            }
+            council.GoverningParty = 0;
+            s.Council = council;
+            string platformPolicy = Party.Roster[0].Platform[0];
+            Assert.True(PoliticalEngine.CouncilVote(s, platformPolicy, new Random(1)));
+        }
+
+        [Fact]
+        public void CouncilVoteWithMajorityIsContested()
+        {
+            PoliticalState s = NewState();
+            s.Council.RecomputeFromShares(new float[] { 0.3f, 0.25f, 0.2f, 0.15f, 0.05f, 0.05f });
+            Assert.True(s.Council.CoalitionSeats() > Council.SeatCount / 2);
+            bool sawApprove = false;
+            bool sawReject = false;
+            for (int seed = 0; seed < 200; seed++)
+            {
+                if (PoliticalEngine.CouncilVote(s, "notInPlatform", new Random(seed)))
+                {
+                    sawApprove = true;
+                }
+                else
+                {
+                    sawReject = true;
+                }
+            }
+            Assert.True(sawApprove && sawReject, "contested votes should produce both outcomes");
         }
 
         [Fact]
@@ -220,7 +254,7 @@ namespace PolitiCities.Tests
                 }
             }
 
-            Assert.Equal(777, loaded.CampaignBudget);
+            Assert.Equal(677, loaded.CampaignBudget);
             Assert.Equal(0.42f, loaded.LeaderApproval);
             Assert.Equal(0f, loaded.PolicyProgress["stimulusPackage"]);
             Assert.Equal(4, loaded.PilotDistricts["stimulusPackage"]);

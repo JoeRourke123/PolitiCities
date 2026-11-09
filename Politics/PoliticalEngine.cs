@@ -74,7 +74,7 @@ namespace PolitiCities.Politics
 
         public static void AdvanceImplementation(PoliticalState s)
         {
-            float rate = 1f / (TicksPerMonth * ImplementationMonths) / Math.Max(0.1f, s.AdminCapacity);
+            float rate = Math.Max(0.1f, s.AdminCapacity) / (TicksPerMonth * ImplementationMonths);
             var keys = new List<string>(s.PolicyProgress.Keys);
             foreach (string policy in keys)
             {
@@ -125,7 +125,7 @@ namespace PolitiCities.Politics
             }
         }
 
-        public static bool CouncilVote(PoliticalState s, string policyId)
+        public static bool CouncilVote(PoliticalState s, string policyId, Random rng)
         {
             if (s.Council.GoverningParty >= 0)
             {
@@ -135,7 +135,11 @@ namespace PolitiCities.Politics
                     return true;
                 }
             }
-            return s.Council.CoalitionSeats() > Council.SeatCount / 2;
+            if (s.Council.CoalitionSeats() <= Council.SeatCount / 2)
+            {
+                return false;
+            }
+            return rng.NextDouble() < 0.5;
         }
 
         public static int ResolveDistrictElection(PoliticalState s, DistrictInfo d, Random rng)

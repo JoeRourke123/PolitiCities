@@ -7,6 +7,8 @@ namespace PolitiCities.Patches
     [HarmonyPatch(typeof(DistrictManager), nameof(DistrictManager.SetCityPolicy))]
     public static class CouncilVotePatch
     {
+        private static readonly System.Random rng = new System.Random();
+
         public static bool Prefix(DistrictPolicies.Policies policy)
         {
             PoliticalState s = PoliticalData.Current;
@@ -14,7 +16,7 @@ namespace PolitiCities.Patches
             {
                 return true;
             }
-            bool approved = PoliticalEngine.CouncilVote(s, policy.ToString());
+            bool approved = PoliticalEngine.CouncilVote(s, policy.ToString(), rng);
             if (!approved)
             {
                 Debug.Log("[PolitiCities] Council rejected city policy " + policy + " (coalition " + s.Council.CoalitionSeats() + "/" + Council.SeatCount + ")");
