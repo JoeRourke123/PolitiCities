@@ -62,14 +62,18 @@ Extension points used: `IUserMod` (entry), `LoadingExtensionBase` (lifecycle + h
 - Opened with the `P` key via `HotkeyHandler` (a `MonoBehaviour` created in `Loading.OnLevelLoaded`; main-thread `Input` only).
 - Mod options via `OnSettingsUI` (`Settings.cs`).
 
-## Build order
+## Build order / status
 
-1. Scaffold (this commit): model, persistence, sim tick, panel, hotkey — compiles in CI.
-2. First live patch: gate custom policy effects on `PolicyProgress` via Harmony on a small stable method; wire polls to `StatisticsManager` happiness.
-3. Council vote enforcement patch on `PolicyManager.TogglePolicy`/`SetCityPolicy`.
-4. District elections + `SetDistrictPolicy` overrides + read-only district panel patch.
-5. Sliders → continuous effect patches; pilot district scoping in the same patches.
-6. Campaign spending from `EconomyManager` budget; ministries affecting service budgets.
+1. Scaffold: model, persistence, sim tick, panel, hotkey — done.
+2. First live patch — done: `Patches/EconomyPatches.cs` (+10% private income while `stimulusPackage` is fully implemented); approval wired to `StatisticsManager.Get(StatisticType.CityHappiness).GetLatestInt32()`.
+3. Council vote enforcement — done: `Patches/CouncilPatches.cs` prefix on `DistrictManager.SetCityPolicy(Policies)`, off by default (`Settings.EnforceCouncilVotes`), votes per `PoliticalEngine.CouncilVote` (governing-party platform auto-approves, otherwise coalition majority).
+4. District elections — done in engine + adapter: every `MonthsPerDistrictElection` (12) months per district, winner from seeded vote + district happiness/crime (`District.m_finalHappiness`/`m_finalCrimeRate`), winner's `Party.Platform` policies applied via `DistrictManager.SetDistrictPolicy(Policies, uint8)`.
+5. Sliders — engine-level effects on approval done (`PoliticalEngine.ApplySliderEffects`); panel +/- controls; continuous game-effect patches still open.
+6. Campaigns/ministries affecting the real budget — open.
+
+## Tests
+
+`tests/PolitiCities.Tests.csproj` (net8.0, xUnit) compiles the pure logic files (`Party`, `Council`, `PoliticalState`, `PoliticalEngine`) directly and runs in the `Test` workflow on every push/PR. The mod csproj excludes `tests/**`. Keep all game-API-free logic in `PoliticalEngine` so it stays testable.
 
 ## Verified signatures (read from `lib/` DLLs via metadata, 2026-11)
 

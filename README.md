@@ -45,7 +45,8 @@ The in-game alternative is still available: enable the local mod in Content Mana
 - `Loading.cs` — `LoadingExtensionBase`; `OnLevelLoaded(LoadMode mode)` is the main per-save hook (the game auto-discovers all extension interfaces in the mod assembly).
 - `Settings.cs` — mod options panel via `IUserMod.OnSettingsUI`.
 - `lib/` — game reference DLLs used for building (see `lib/README.md`).
-- `.github/workflows/` — build / release / workshop-upload automation.
+- `.github/workflows/` — `build.yml` (compile + package zip artifact), `test.yml` (xUnit tests of the pure engine), `release.yml` (GitHub Releases on `v*` tags), `workshop-upload.yml` (manual-only steamcmd Workshop upload).
+- `tests/` — xUnit tests for the political engine (run `dotnet test tests/PolitiCities.Tests.csproj` locally; CI runs them on every push).
 - `Politics/` — the political simulation: `Party`/`Council` (model), `PoliticalState` (per-save state), `PoliticalData` (savegame persistence via `SerializableDataExtensionBase`), `PoliticalSimulation` (simulation tick via `ThreadingExtensionBase`), `CouncilPanel` + `HotkeyHandler` (UI, open with the `P` key in game).
 - `Patches/` — Harmony patches against game code (e.g. `EconomyPatches.cs` gates the stimulus policy effect on implementation progress).
 - `docs/DESIGN.md` — feature design, systems map, verified API signatures, and build order.

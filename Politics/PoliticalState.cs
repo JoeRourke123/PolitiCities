@@ -6,7 +6,7 @@ namespace PolitiCities.Politics
 {
     public sealed class PoliticalState
     {
-        public const int SaveVersion = 1;
+        public const int SaveVersion = 2;
 
         public float[] VoteShare = new float[Party.Roster.Length];
         public float LeaderApproval = 0.6f;
@@ -21,6 +21,8 @@ namespace PolitiCities.Politics
         public Dictionary<string, float> PolicyProgress = new Dictionary<string, float>();
         public Dictionary<string, int> PilotDistricts = new Dictionary<string, int>();
         public Dictionary<int, float> CampaignBoost = new Dictionary<int, float>();
+        public Dictionary<int, int> RulingParty = new Dictionary<int, int>();
+        public Dictionary<int, int> DistrictElectionMonths = new Dictionary<int, int>();
 
         public PoliticalState()
         {
@@ -52,6 +54,8 @@ namespace PolitiCities.Politics
             WriteDict(w, PolicyProgress);
             WriteDict(w, PilotDistricts);
             WriteDict(w, CampaignBoost);
+            WriteDict(w, RulingParty);
+            WriteDict(w, DistrictElectionMonths);
             w.Write(Council.Seats.Length);
             foreach (int s in Council.Seats)
             {
@@ -93,6 +97,8 @@ namespace PolitiCities.Politics
             PolicyProgress = ReadDictFloat(r);
             PilotDistricts = ReadDictInt(r);
             CampaignBoost = ReadDictIntFloat(r);
+            RulingParty = ReadDictIntInt(r);
+            DistrictElectionMonths = ReadDictIntInt(r);
             int seats = r.ReadInt32();
             Council.Seats = new int[seats];
             for (int i = 0; i < seats; i++)
@@ -145,6 +151,16 @@ namespace PolitiCities.Politics
             }
         }
 
+        private static void WriteDict(BinaryWriter w, Dictionary<int, int> d)
+        {
+            w.Write(d.Count);
+            foreach (KeyValuePair<int, int> kv in d)
+            {
+                w.Write(kv.Key);
+                w.Write(kv.Value);
+            }
+        }
+
         private static Dictionary<string, float> ReadDictFloat(BinaryReader r)
         {
             var d = new Dictionary<string, float>();
@@ -174,6 +190,17 @@ namespace PolitiCities.Politics
             for (int i = 0; i < n; i++)
             {
                 d[r.ReadInt32()] = r.ReadSingle();
+            }
+            return d;
+        }
+
+        private static Dictionary<int, int> ReadDictIntInt(BinaryReader r)
+        {
+            var d = new Dictionary<int, int>();
+            int n = r.ReadInt32();
+            for (int i = 0; i < n; i++)
+            {
+                d[r.ReadInt32()] = r.ReadInt32();
             }
             return d;
         }
