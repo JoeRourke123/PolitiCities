@@ -90,17 +90,25 @@ namespace PolitiCities.Politics
 
         private void ApplyPlatform(DistrictManager dm, int district, Party winner)
         {
-            foreach (string policyName in winner.Platform)
+            Patches.DistrictLockPatch.Allow = true;
+            try
             {
-                try
+                foreach (string policyName in winner.Platform)
                 {
-                    DistrictPolicies.Policies policy = (DistrictPolicies.Policies)Enum.Parse(typeof(DistrictPolicies.Policies), policyName);
-                    dm.SetDistrictPolicy(policy, (byte)district);
+                    try
+                    {
+                        DistrictPolicies.Policies policy = (DistrictPolicies.Policies)Enum.Parse(typeof(DistrictPolicies.Policies), policyName);
+                        dm.SetDistrictPolicy(policy, (byte)district);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log("[PolitiCities] Could not apply district policy " + policyName + ": " + e.Message);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Debug.Log("[PolitiCities] Could not apply district policy " + policyName + ": " + e.Message);
-                }
+            }
+            finally
+            {
+                Patches.DistrictLockPatch.Allow = false;
             }
         }
     }

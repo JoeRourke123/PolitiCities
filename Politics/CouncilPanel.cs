@@ -79,6 +79,25 @@ namespace PolitiCities.Politics
                 Refresh();
             };
 
+            UIButton referendum = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+            referendum.text = "Referendum: greenNewDeal";
+            referendum.size = new Vector2(190f, 28f);
+            referendum.relativePosition = new Vector3(200f, 574f);
+            referendum.eventClicked += (c, p) =>
+            {
+                PoliticalState s = PoliticalData.Current;
+                if (s != null)
+                {
+                    bool pass = PoliticalEngine.HoldReferendum(s, new System.Random(s.RandomSeed + s.MonthsSinceElection), "greenNewDeal");
+                    if (pass)
+                    {
+                        PoliticalEngine.EnactPolicy(s, "greenNewDeal", -1);
+                        s.PolicyProgress["greenNewDeal"] = 1f;
+                    }
+                }
+                Refresh();
+            };
+
             UIButton fund = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             fund.text = "Fund campaign 5000";
             fund.size = new Vector2(160f, 28f);
@@ -159,7 +178,9 @@ namespace PolitiCities.Politics
                 Party p = Party.Roster[i];
                 int seats = i < s.Council.Seats.Length ? s.Council.Seats[i] : 0;
                 string coalition = i < s.Council.InCoalition.Length && s.Council.InCoalition[i] ? " [gov]" : "";
-                sb.AppendLine("  " + p.Name + ": " + (s.VoteShare[i] * 100f).ToString("0.0") + "%  seats " + seats + coalition);
+                int trend = PoliticalEngine.PollTrend(s, i);
+                string arrow = trend > 0 ? " ^" : (trend < 0 ? " v" : " -");
+                sb.AppendLine("  " + p.Name + ": " + (s.VoteShare[i] * 100f).ToString("0.0") + "%" + arrow + "  seats " + seats + coalition);
             }
             sb.AppendLine();
             sb.AppendLine("Governing: " + (s.Council.GoverningParty >= 0 ? Party.Roster[s.Council.GoverningParty].Name : "none") + " (" + s.Council.CoalitionSeats() + "/" + Council.SeatCount + ")");

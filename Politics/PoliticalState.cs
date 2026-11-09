@@ -6,7 +6,7 @@ namespace PolitiCities.Politics
 {
     public sealed class PoliticalState
     {
-        public const int SaveVersion = 3;
+        public const int SaveVersion = 4;
 
         public float[] VoteShare = new float[Party.Roster.Length];
         public float LeaderApproval = 0.6f;
@@ -26,6 +26,7 @@ namespace PolitiCities.Politics
         public Dictionary<string, int> ActiveCrises = new Dictionary<string, int>();
         public Dictionary<string, float> ForeignRelations = new Dictionary<string, float>();
         public List<string> EventLog = new List<string>();
+        public List<float[]> PollHistory = new List<float[]>();
 
         public PoliticalState()
         {
@@ -65,6 +66,15 @@ namespace PolitiCities.Politics
             foreach (string e in EventLog)
             {
                 w.Write(e);
+            }
+            w.Write(PollHistory.Count);
+            foreach (float[] snapshot in PollHistory)
+            {
+                w.Write(snapshot.Length);
+                foreach (float v in snapshot)
+                {
+                    w.Write(v);
+                }
             }
             w.Write(Council.Seats.Length);
             foreach (int s in Council.Seats)
@@ -121,6 +131,18 @@ namespace PolitiCities.Politics
             for (int i = 0; i < logCount; i++)
             {
                 EventLog.Add(r.ReadString());
+            }
+            int histCount = r.ReadInt32();
+            PollHistory = new List<float[]>();
+            for (int i = 0; i < histCount; i++)
+            {
+                int len = r.ReadInt32();
+                var snap = new float[len];
+                for (int j = 0; j < len; j++)
+                {
+                    snap[j] = r.ReadSingle();
+                }
+                PollHistory.Add(snap);
             }
             int seats = r.ReadInt32();
             Council.Seats = new int[seats];

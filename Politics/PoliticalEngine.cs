@@ -37,6 +37,10 @@ namespace PolitiCities.Politics
         public const float CrisisChancePerMonth = 0.05f;
         public const float ForeignEventChancePerMonth = 0.1f;
         public const int EventLogCapacity = 50;
+        public const int PollHistoryMonths = 24;
+
+        public static readonly string[] KnownPolicies = { StimulusPolicyId, "greenNewDeal" };
+        public const string StimulusPolicyId = "stimulusPackage";
 
         public static readonly CrisisDef[] CrisisTable =
         {
@@ -66,8 +70,10 @@ namespace PolitiCities.Politics
                 s.LeaderApproval = Clamp01(realApproval);
             }
             ApplySliderEffects(s);
+            ApplyPolicyEffects(s);
             s.LeaderApproval = Clamp01(s.LeaderApproval - CrisisApprovalPenalty(s) * 0.1f);
             DriftVoteShares(s, rng);
+            RecordPollHistory(s);
             DecayCampaigns(s);
             TickCrises(s, rng);
             MaybeTriggerCrisis(s, rng);
@@ -88,6 +94,69 @@ namespace PolitiCities.Politics
                 + SliderDelta(s, "greenInvestment") * 0.02f
                 - SliderDelta(s, "policeFunding") * 0.02f;
             s.LeaderApproval = Clamp01(s.LeaderApproval + delta);
+        }
+
+        public static void ApplyPolicyEffects(PoliticalState s)
+        {
+            float progress;
+            if (s.PolicyProgress.TryGetValue("greenNewDeal", out progress) && progress >= 1f)
+            {
+                s.LeaderApproval = Clamp01(s.LeaderApproval + 0.01f);
+            }
+        }
+
+        public static void RecordPollHistory(PoliticalState s)
+        {
+            s.PollHistory.Add((float[])s.VoteShare.Clone());
+            while (s.PollHistory.Count > PollHistoryMonths)
+            {
+                s.PollHistory.RemoveAt(0);
+            }
+        }
+
+        public static int PollTrend(PoliticalState s, int partyIndex)
+        {
+            if (s.PollHistory.Count < 2)
+            {
+                return 0;
+            }
+            float now = s.PollHistory[s.PollHistory.Count - 1][partyIndex];
+            float before = s.PollHistory[s.PollHistory.Count - 2][partyIndex];
+            if (now > before + 0.001f)
+            {
+                return 1;
+            }
+            if (now < before - 0.001f)
+            {
+                return -1;
+            }
+            return 0;
+        }
+
+        public static bool HoldReferendum(PoliticalState s, Random rng, string subject)
+        {
+            bool pass = s.LeaderApproval + ((float)rng.NextDouble() - 0.5f) * 0.2f > 0.5f;
+            if (pass)
+            {
+                s.LeaderApproval = Clamp01(s.LeaderApproval + 0.05f);
+                LogEvent(s, "Referendum passed: " + subject);
+            }
+            else
+            {
+                s.LeaderApproval = Clamp01(s.LeaderApproval - 0.05f);
+                LogEvent(s, "Referendum failed: " + subject);
+            }
+            return pass;
+        }
+
+        public static bool CanPlayerEditDistrict(PoliticalState s, int districtId)
+        {
+            int ruler;
+            if (!s.RulingParty.TryGetValue(districtId, out ruler) || ruler < 0)
+            {
+                return true;
+            }
+            return ruler < s.Council.InCoalition.Length && s.Council.InCoalition[ruler];
         }
 
         public static void DriftVoteShares(PoliticalState s, Random rng)
