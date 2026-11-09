@@ -71,7 +71,16 @@ Extension points used: `IUserMod` (entry), `LoadingExtensionBase` (lifecycle + h
 5. Sliders — engine-level effects on approval done (`PoliticalEngine.ApplySliderEffects`); panel +/- controls; continuous game-effect patches still open.
 6. Campaigns/ministries vs the real economy — done: "Fund campaign" spends real city cash (`EconomyManager.InternalCashAmount` read, `AddResource(Resource.PolicyCost, -amount, …)` deduct); ministries have competence (0.4–1.0) assigned at coalition formation and scale service budgets via a `GetBudget(Service, SubService, bool)` postfix (`MinistryBudgetPatch`).
 
-Also implemented: economic crises (`PoliticalEngine.CrisisTable`: factoryClosures / tradeShock / financialPanic / scandal; ~5%/month while none active; approval + income effects, income applied in `StimulusIncomePatch` prefix), foreign relations meters for 3 powers with random events, and a capped event log shown in the panel. Save format v3 (file-based; embedded `ISerializableDataManager` still open).
+Also implemented: economic crises (`PoliticalEngine.CrisisTable`: factoryClosures / tradeShock / financialPanic / scandal; ~5%/month while none active; approval + income effects, income applied in `StimulusIncomePatch` prefix), foreign relations meters for 3 powers with random events, and a capped event log shown in the panel. Save format v4 (file-based; embedded `ISerializableDataManager` still open).
+
+Final batch (done): persisted mod settings via `ColossalFramework.SavedBool`; referendums (`PoliticalEngine.HoldReferendum`, panel button — passing one instantly implements `greenNewDeal`, which grants +approval/month while active); 24-month poll history with trend arrows in the panel; district lock enforcement — `Patches/DistrictLockPatch` prefix on `DistrictManager.SetDistrictPolicy(Policies, byte)` blocks the player from editing districts whose ruling party is outside the governing coalition (our own election platform application bypasses via `DistrictLockPatch.Allow`).
+
+## Deliberately deferred
+
+- Custom prefabs in the vanilla Policies panel: vanilla city policies are the fixed `DistrictPolicies.Policies` enum, so custom policies can't get panel slots; our custom policies live in the PolitiCities panel instead.
+- Savegame-embedded persistence: `ISerializableData.SaveData/LoadData` exist but their serialization semantics need in-game verification; file-based v4 persistence (tested round-trip) is the shipped mechanism.
+- Chirper announcements: replaced by the in-panel event log + F7 debug panel (`IChirperExtension` only observes messages; posting needs UI internals).
+- Loans/interest: vanilla already has loans (`EconomyManager.TakeNewLoan` etc.), so the deeper economy layer is left to vanilla.
 
 ## Tests
 
