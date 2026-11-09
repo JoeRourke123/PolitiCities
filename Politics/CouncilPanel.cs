@@ -15,7 +15,7 @@ namespace PolitiCities.Politics
         private UILabel body;
         private UILabel[] sliderLabels = new UILabel[SliderKeys.Length];
         private readonly List<UIComponent> dynamicControls = new List<UIComponent>();
-        private readonly Random uiRandom = new Random();
+        private readonly System.Random uiRandom = new System.Random();
 
         public bool IsOpen
         {
