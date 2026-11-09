@@ -205,8 +205,8 @@ namespace PolitiCities.Politics
                 int ruler;
                 if (s.RulingParty.TryGetValue(i, out ruler))
                 {
-                    string lock = PoliticalEngine.CanPlayerEditDistrict(s, i) ? "" : " [locked]";
-                    sb.AppendLine("  " + dm.GetDistrictName(i) + ": " + Party.Roster[ruler].Name + lock);
+                    string lockMark = PoliticalEngine.CanPlayerEditDistrict(s, i) ? "" : " [locked]";
+                    sb.AppendLine("  " + dm.GetDistrictName(i) + ": " + Party.Roster[ruler].Name + lockMark);
                     shown++;
                 }
             }

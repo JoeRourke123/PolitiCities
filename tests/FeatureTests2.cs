@@ -82,24 +82,24 @@ namespace PolitiCities.Tests
     public class PolicyEffectTests
     {
         [Fact]
-        public void GreenNewDealBoostsApprovalWhenImplemented()
+        public void GreenNewDealCountsTowardApprovalDeltaWhenImplemented()
         {
             PoliticalState s = new PoliticalState();
-            s.LeaderApproval = 0.5f;
             PoliticalEngine.EnactPolicy(s, "greenNewDeal", -1);
+            Assert.Equal(0f, PoliticalEngine.PolicyApprovalDelta(s), 5);
             s.PolicyProgress["greenNewDeal"] = 1f;
-            PoliticalEngine.ApplyPolicyEffects(s);
-            Assert.True(s.LeaderApproval > 0.5f);
+            Assert.Equal(0.01f, PoliticalEngine.PolicyApprovalDelta(s), 5);
         }
 
         [Fact]
-        public void GreenNewDealDoesNothingWhileImplementing()
+        public void MonthlyUpdateAppliesPolicyApprovalDelta()
         {
             PoliticalState s = new PoliticalState();
             s.LeaderApproval = 0.5f;
-            PoliticalEngine.EnactPolicy(s, "greenNewDeal", -1);
-            PoliticalEngine.ApplyPolicyEffects(s);
-            Assert.Equal(0.5f, s.LeaderApproval);
+            PoliticalEngine.EnactPolicy(s, "austerityPackage", -1);
+            s.PolicyProgress["austerityPackage"] = 1f;
+            PoliticalEngine.MonthlyUpdate(s, new Random(1), -1f);
+            Assert.True(s.LeaderApproval < 0.5f);
         }
     }
 
