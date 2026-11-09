@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <AssemblyName>PolitiCities</AssemblyName>
+    <RootNamespace>PolitiCities</RootNamespace>
+    <Deterministic>false</Deterministic>
+    <AssemblyVersion>1.0.*</AssemblyVersion>
+    <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
+    <ManagedDLLPath Condition="'$(ManagedDLLPath)'==''">$(MSBuildProgramFiles32)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed</ManagedDLLPath>
+    <DeployDir Condition="'$(DeployDir)'==''">$(LOCALAPPDATA)\Colossal Order\Cities_Skylines\Addons\Mods\$(AssemblyName)\</DeployDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="All" />
+    <PackageReference Include="CitiesHarmony.API" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="ICities">
+      <HintPath>$(ManagedDLLPath)\ICities.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(ManagedDLLPath)\Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ColossalManaged">
+      <HintPath>$(ManagedDLLPath)\ColossalManaged.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(ManagedDLLPath)\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToModDirectory" AfterTargets="Build">
+    <ItemGroup>
+      <ModFiles Include="$(TargetDir)*.*" />
+    </ItemGroup>
+    <MakeDir Directories="$(DeployDir)" />
+    <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(DeployDir)" />
+  </Target>
+
+</Project>
