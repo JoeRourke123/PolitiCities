@@ -1,0 +1,30 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/_build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PolitiCities
+          path: dist
+
+      - name: Rename package with tag
+        run: mv dist/PolitiCities.zip "dist/PolitiCities-${GITHUB_REF_NAME}.zip"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PolitiCities-*.zip
+          generate_release_notes: true

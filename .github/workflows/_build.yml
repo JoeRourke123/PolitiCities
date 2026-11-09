@@ -1,0 +1,45 @@
+name: _build
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Verify game reference DLLs
+        run: |
+          missing=0
+          for dll in ICities.dll Assembly-CSharp.dll ColossalManaged.dll UnityEngine.dll; do
+            if [ ! -f "lib/$dll" ]; then
+              echo "lib/$dll is missing - copy it from your game's Cities_Data/Managed folder (see lib/README.md)"
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Package
+        run: |
+          mkdir -p dist/PolitiCities
+          cp bin/Release/net35/*.dll dist/PolitiCities/
+          if [ -f PreviewImage.png ]; then cp PreviewImage.png dist/PolitiCities/; fi
+          cd dist
+          zip -r PolitiCities.zip PolitiCities
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PolitiCities
+          path: dist/PolitiCities.zip
+          retention-days: 7
