@@ -3,7 +3,7 @@ using PolitiCities.Politics;
 
 namespace PolitiCities.Patches
 {
-    [HarmonyPatch(typeof(EconomyManager), nameof(EconomyManager.AddPrivateIncome), new[] { typeof(int), typeof(Service), typeof(SubService), typeof(Level), typeof(int) })]
+    [HarmonyPatch(typeof(EconomyManager), nameof(EconomyManager.AddPrivateIncome), new[] { typeof(int), typeof(ItemClass.Service), typeof(ItemClass.SubService), typeof(ItemClass.Level), typeof(int) })]
     public static class StimulusIncomePatch
     {
         public const string PolicyId = "stimulusPackage";
