@@ -10,6 +10,22 @@ namespace PolitiCities.Politics
         public float Crime;
     }
 
+    public struct CrisisDef
+    {
+        public string Id;
+        public float ApprovalHit;
+        public float IncomeHit;
+        public int DurationMonths;
+
+        public CrisisDef(string id, float approvalHit, float incomeHit, int durationMonths)
+        {
+            Id = id;
+            ApprovalHit = approvalHit;
+            IncomeHit = incomeHit;
+            DurationMonths = durationMonths;
+        }
+    }
+
     public static class PoliticalEngine
     {
         public const int TicksPerMonth = 100000;
@@ -18,6 +34,19 @@ namespace PolitiCities.Politics
         public const float ImplementationMonths = 3f;
         public const float CampaignDecayPerMonth = 0.9f;
         public const float SliderStep = 0.05f;
+        public const float CrisisChancePerMonth = 0.05f;
+        public const float ForeignEventChancePerMonth = 0.1f;
+        public const int EventLogCapacity = 50;
+
+        public static readonly CrisisDef[] CrisisTable =
+        {
+            new CrisisDef("factoryClosures", 0.06f, 0.10f, 6),
+            new CrisisDef("tradeShock", 0.04f, 0.15f, 4),
+            new CrisisDef("financialPanic", 0.10f, 0.20f, 8),
+            new CrisisDef("scandal", 0.08f, 0f, 3),
+        };
+
+        public static readonly string[] ForeignPowers = { "Aldermark", "Port Vela", "Kessig Republic" };
 
         public static void Tick(PoliticalState s, Random rng, float realApproval)
         {
@@ -37,14 +66,19 @@ namespace PolitiCities.Politics
                 s.LeaderApproval = Clamp01(realApproval);
             }
             ApplySliderEffects(s);
+            s.LeaderApproval = Clamp01(s.LeaderApproval - CrisisApprovalPenalty(s) * 0.1f);
             DriftVoteShares(s, rng);
             DecayCampaigns(s);
+            TickCrises(s, rng);
+            MaybeTriggerCrisis(s, rng);
+            TickForeign(s, rng);
 
             s.MonthsSinceElection++;
             if (s.MonthsSinceElection >= MonthsPerElection)
             {
                 s.MonthsSinceElection = 0;
-                s.Council.RecomputeFromShares(s.VoteShare);
+                s.Council.RecomputeFromShares(s.VoteShare, rng);
+                LogEvent(s, "City election held; new council seated.");
             }
         }
 
@@ -113,6 +147,14 @@ namespace PolitiCities.Politics
             return true;
         }
 
+        public static void FundCampaign(PoliticalState s, int amount)
+        {
+            if (amount > 0)
+            {
+                s.CampaignBudget += amount;
+            }
+        }
+
         public static void EnactPolicy(PoliticalState s, string policyId, int pilotDistrict)
         {
             if (!s.PolicyProgress.ContainsKey(policyId))
@@ -178,6 +220,144 @@ namespace PolitiCities.Politics
         public static void PromotePilot(PoliticalState s, string policyId)
         {
             s.PilotDistricts.Remove(policyId);
+        }
+
+        public static void MaybeTriggerCrisis(PoliticalState s, Random rng)
+        {
+            if (s.ActiveCrises.Count > 0)
+            {
+                return;
+            }
+            if (rng.NextDouble() < CrisisChancePerMonth)
+            {
+                CrisisDef c = CrisisTable[rng.Next(CrisisTable.Length)];
+                s.ActiveCrises[c.Id] = c.DurationMonths;
+                LogEvent(s, "Crisis begins: " + c.Id + " (" + c.DurationMonths + " months)");
+            }
+        }
+
+        public static void TickCrises(PoliticalState s, Random rng)
+        {
+            var keys = new List<string>(s.ActiveCrises.Keys);
+            foreach (string id in keys)
+            {
+                int left = s.ActiveCrises[id] - 1;
+                if (left <= 0)
+                {
+                    s.ActiveCrises.Remove(id);
+                    LogEvent(s, "Crisis resolved: " + id);
+                }
+                else
+                {
+                    s.ActiveCrises[id] = left;
+                }
+            }
+        }
+
+        public static float CrisisApprovalPenalty(PoliticalState s)
+        {
+            float sum = 0f;
+            foreach (var kv in s.ActiveCrises)
+            {
+                foreach (CrisisDef c in CrisisTable)
+                {
+                    if (c.Id == kv.Key)
+                    {
+                        sum += c.ApprovalHit;
+                    }
+                }
+            }
+            return sum;
+        }
+
+        public static float CrisisIncomeMultiplier(PoliticalState s)
+        {
+            float mult = 1f;
+            foreach (var kv in s.ActiveCrises)
+            {
+                foreach (CrisisDef c in CrisisTable)
+                {
+                    if (c.Id == kv.Key)
+                    {
+                        mult *= 1f - c.IncomeHit;
+                    }
+                }
+            }
+            return mult;
+        }
+
+        public static void TickForeign(PoliticalState s, Random rng)
+        {
+            foreach (string power in ForeignPowers)
+            {
+                float v;
+                if (!s.ForeignRelations.TryGetValue(power, out v))
+                {
+                    v = 50f;
+                }
+                v += (50f - v) * 0.05f + ((float)rng.NextDouble() - 0.5f) * 4f;
+                s.ForeignRelations[power] = Clamp(v, 0f, 100f);
+            }
+            if (rng.NextDouble() < ForeignEventChancePerMonth)
+            {
+                string power = ForeignPowers[rng.Next(ForeignPowers.Length)];
+                float delta = ((float)rng.NextDouble() - 0.5f) * 30f;
+                float v;
+                s.ForeignRelations.TryGetValue(power, out v);
+                s.ForeignRelations[power] = Clamp(v + delta, 0f, 100f);
+                LogEvent(s, "Foreign event with " + power + " (" + (delta >= 0 ? "+" : "") + delta.ToString("0") + " relations)");
+            }
+        }
+
+        public static string MinistryForService(string service)
+        {
+            switch (service)
+            {
+                case "Road":
+                case "PublicTransport":
+                case "Electricity":
+                case "Water":
+                    return "Infrastructure";
+                case "Beautification":
+                case "Garbage":
+                    return "Environment";
+                case "PoliceDepartment":
+                case "FireDepartment":
+                case "Disaster":
+                    return "Security";
+                case "HealthCare":
+                case "Education":
+                    return "Social Affairs";
+                default:
+                    return "Finance";
+            }
+        }
+
+        public static float MinistryMultiplier(PoliticalState s, string service)
+        {
+            int mIndex = Array.IndexOf(Council.MinistryNames, MinistryForService(service));
+            float comp = CompetenceAt(s, mIndex);
+            float ministryFactor = 0.8f + 0.4f * comp;
+            float financeFactor = 0.95f + 0.1f * CompetenceAt(s, Array.IndexOf(Council.MinistryNames, "Finance"));
+            return ministryFactor * financeFactor;
+        }
+
+        private static float CompetenceAt(PoliticalState s, int ministryIndex)
+        {
+            if (ministryIndex < 0 || ministryIndex >= s.Council.MinisterCompetence.Length)
+            {
+                return 0.5f;
+            }
+            return s.Council.MinisterCompetence[ministryIndex];
+        }
+
+        public static void LogEvent(PoliticalState s, string message)
+        {
+            s.EventLog.Add(message);
+            while (s.EventLog.Count > EventLogCapacity)
+            {
+                s.EventLog.RemoveAt(0);
+            }
         }
 
         private static float SliderDelta(PoliticalState s, string key)

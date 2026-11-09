@@ -15,9 +15,15 @@ namespace PolitiCities.Politics
         public int[] Seats = new int[Party.Roster.Length];
         public bool[] InCoalition = new bool[Party.Roster.Length];
         public string[] MinistryParty = new string[MinistryNames.Length];
+        public float[] MinisterCompetence = new float[MinistryNames.Length];
         public int GoverningParty = -1;
 
         public void RecomputeFromShares(float[] shares)
+        {
+            RecomputeFromShares(shares, new Random(0));
+        }
+
+        public void RecomputeFromShares(float[] shares, Random rng)
         {
             Array.Clear(Seats, 0, Seats.Length);
             float total = 0f;
@@ -56,11 +62,15 @@ namespace PolitiCities.Politics
                 assigned++;
             }
 
-            FormCoalition();
+            FormCoalition(rng);
         }
 
-        public void FormCoalition()
+        public void FormCoalition(Random rng)
         {
+            if (rng == null)
+            {
+                rng = new Random(0);
+            }
             Array.Clear(InCoalition, 0, InCoalition.Length);
             Array.Clear(MinistryParty, 0, MinistryParty.Length);
             GoverningParty = -1;
@@ -118,6 +128,7 @@ namespace PolitiCities.Politics
                     }
                 }
                 MinistryParty[m] = best >= 0 ? Party.Roster[best].Id : null;
+                MinisterCompetence[m] = 0.4f + 0.6f * (float)rng.NextDouble();
             }
         }
 

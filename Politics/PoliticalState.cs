@@ -6,7 +6,7 @@ namespace PolitiCities.Politics
 {
     public sealed class PoliticalState
     {
-        public const int SaveVersion = 2;
+        public const int SaveVersion = 3;
 
         public float[] VoteShare = new float[Party.Roster.Length];
         public float LeaderApproval = 0.6f;
@@ -23,6 +23,9 @@ namespace PolitiCities.Politics
         public Dictionary<int, float> CampaignBoost = new Dictionary<int, float>();
         public Dictionary<int, int> RulingParty = new Dictionary<int, int>();
         public Dictionary<int, int> DistrictElectionMonths = new Dictionary<int, int>();
+        public Dictionary<string, int> ActiveCrises = new Dictionary<string, int>();
+        public Dictionary<string, float> ForeignRelations = new Dictionary<string, float>();
+        public List<string> EventLog = new List<string>();
 
         public PoliticalState()
         {
@@ -56,6 +59,13 @@ namespace PolitiCities.Politics
             WriteDict(w, CampaignBoost);
             WriteDict(w, RulingParty);
             WriteDict(w, DistrictElectionMonths);
+            WriteDict(w, ActiveCrises);
+            WriteDict(w, ForeignRelations);
+            w.Write(EventLog.Count);
+            foreach (string e in EventLog)
+            {
+                w.Write(e);
+            }
             w.Write(Council.Seats.Length);
             foreach (int s in Council.Seats)
             {
@@ -72,6 +82,11 @@ namespace PolitiCities.Politics
                 w.Write(m ?? string.Empty);
             }
             w.Write(Council.GoverningParty);
+            w.Write(Council.MinisterCompetence.Length);
+            foreach (float c in Council.MinisterCompetence)
+            {
+                w.Write(c);
+            }
         }
 
         public void Read(BinaryReader r)
@@ -99,6 +114,14 @@ namespace PolitiCities.Politics
             CampaignBoost = ReadDictIntFloat(r);
             RulingParty = ReadDictIntInt(r);
             DistrictElectionMonths = ReadDictIntInt(r);
+            ActiveCrises = ReadDictStringInt(r);
+            ForeignRelations = ReadDictFloat(r);
+            int logCount = r.ReadInt32();
+            EventLog = new List<string>();
+            for (int i = 0; i < logCount; i++)
+            {
+                EventLog.Add(r.ReadString());
+            }
             int seats = r.ReadInt32();
             Council.Seats = new int[seats];
             for (int i = 0; i < seats; i++)
@@ -119,6 +142,12 @@ namespace PolitiCities.Politics
                 Council.MinistryParty[i] = m.Length == 0 ? null : m;
             }
             Council.GoverningParty = r.ReadInt32();
+            int comp = r.ReadInt32();
+            Council.MinisterCompetence = new float[comp];
+            for (int i = 0; i < comp; i++)
+            {
+                Council.MinisterCompetence[i] = r.ReadSingle();
+            }
         }
 
         private static void WriteDict(BinaryWriter w, Dictionary<string, float> d)
@@ -190,6 +219,17 @@ namespace PolitiCities.Politics
             for (int i = 0; i < n; i++)
             {
                 d[r.ReadInt32()] = r.ReadSingle();
+            }
+            return d;
+        }
+
+        private static Dictionary<string, int> ReadDictStringInt(BinaryReader r)
+        {
+            var d = new Dictionary<string, int>();
+            int n = r.ReadInt32();
+            for (int i = 0; i < n; i++)
+            {
+                d[r.ReadString()] = r.ReadInt32();
             }
             return d;
         }

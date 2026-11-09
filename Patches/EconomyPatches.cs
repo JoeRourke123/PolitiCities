@@ -12,15 +12,31 @@ namespace PolitiCities.Patches
         public static void Prefix(ref int amount)
         {
             PoliticalState s = PoliticalData.Current;
-            if (s == null || amount <= 0)
+            if (s == null || amount <= 0 || !Settings.EnablePolitics)
             {
                 return;
             }
+            float multiplier = PoliticalEngine.CrisisIncomeMultiplier(s);
             float progress;
             if (s.PolicyProgress.TryGetValue(PolicyId, out progress) && progress >= 1f)
             {
-                amount = (int)(amount * IncomeMultiplier);
+                multiplier *= IncomeMultiplier;
             }
+            amount = (int)(amount * multiplier);
+        }
+    }
+
+    [HarmonyPatch(typeof(EconomyManager), nameof(EconomyManager.GetBudget), new[] { typeof(ItemClass.Service), typeof(ItemClass.SubService), typeof(bool) })]
+    public static class MinistryBudgetPatch
+    {
+        public static void Postfix(ItemClass.Service service, ref int __result)
+        {
+            PoliticalState s = PoliticalData.Current;
+            if (s == null || !Settings.EnablePolitics || __result <= 0)
+            {
+                return;
+            }
+            __result = (int)(__result * PoliticalEngine.MinistryMultiplier(s, service.ToString()));
         }
     }
 }

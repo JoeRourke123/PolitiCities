@@ -65,8 +65,27 @@ namespace PolitiCities.Politics
                 s.RulingParty[i] = winner;
                 s.DistrictElectionMonths[i] = 0;
                 ApplyPlatform(dm, i, Party.Roster[winner]);
-                Debug.Log("[PolitiCities] District " + i + " (" + dm.GetDistrictName(i) + ") elected " + Party.Roster[winner].Name);
+                string msg = "District " + dm.GetDistrictName(i) + " elected " + Party.Roster[winner].Name;
+                PoliticalEngine.LogEvent(s, msg);
+                Debug.Log("[PolitiCities] " + msg);
             }
+        }
+
+        public static bool TryFundCampaign(PoliticalState s, long amount)
+        {
+            if (s == null || amount <= 0)
+            {
+                return false;
+            }
+            EconomyManager eco = Singleton<EconomyManager>.instance;
+            if (eco == null || eco.m_cashAmount < amount)
+            {
+                return false;
+            }
+            eco.m_cashAmount -= amount;
+            PoliticalEngine.FundCampaign(s, (int)amount);
+            PoliticalEngine.LogEvent(s, "Campaign funded with " + amount + " from city funds");
+            return true;
         }
 
         private void ApplyPlatform(DistrictManager dm, int district, Party winner)

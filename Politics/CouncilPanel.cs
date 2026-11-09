@@ -79,6 +79,20 @@ namespace PolitiCities.Politics
                 Refresh();
             };
 
+            UIButton fund = panel.AddUIComponent(typeof(UIButton)) as UIButton;
+            fund.text = "Fund campaign 5000";
+            fund.size = new Vector2(160f, 28f);
+            fund.relativePosition = new Vector3(12f, 574f);
+            fund.eventClicked += (c, p) =>
+            {
+                PoliticalState s = PoliticalData.Current;
+                if (s != null && !PoliticalSimulation.TryFundCampaign(s, 5000))
+                {
+                    PoliticalEngine.LogEvent(s, "Campaign funding failed: insufficient city funds");
+                }
+                Refresh();
+            };
+
             UIButton promote = panel.AddUIComponent(typeof(UIButton)) as UIButton;
             promote.text = "Promote pilots city-wide";
             promote.size = new Vector2(180f, 28f);
@@ -180,6 +194,20 @@ namespace PolitiCities.Politics
             sb.AppendLine();
             sb.AppendLine("Campaign budget: " + s.CampaignBudget + "  boosts: " + s.CampaignBoost.Count);
             sb.AppendLine("Approval: " + (s.LeaderApproval * 100f).ToString("0") + "%  next city election in " + (PoliticalEngine.MonthsPerElection - s.MonthsSinceElection) + " months");
+            sb.AppendLine();
+            sb.AppendLine("Active crises: " + (s.ActiveCrises.Count == 0 ? "none" : string.Join(", ", CrisisNames(s))));
+            sb.AppendLine("Foreign relations:");
+            foreach (var kv in s.ForeignRelations)
+            {
+                sb.AppendLine("  " + kv.Key + ": " + kv.Value.ToString("0"));
+            }
+            sb.AppendLine();
+            sb.AppendLine("Events:");
+            int from = System.Math.Max(0, s.EventLog.Count - 5);
+            for (int i = from; i < s.EventLog.Count; i++)
+            {
+                sb.AppendLine("  " + s.EventLog[i]);
+            }
             body.text = sb.ToString();
 
             for (int i = 0; i < SliderKeys.Length; i++)
@@ -188,6 +216,16 @@ namespace PolitiCities.Politics
                 s.PolicySliders.TryGetValue(SliderKeys[i], out v);
                 sliderLabels[i].text = SliderKeys[i] + ": " + v.ToString("0.00");
             }
+        }
+
+        private static string[] CrisisNames(PoliticalState s)
+        {
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var kv in s.ActiveCrises)
+            {
+                names.Add(kv.Key + " (" + kv.Value + "m left)");
+            }
+            return names.ToArray();
         }
 
         private static string PolicyProgressText(PoliticalState s)
